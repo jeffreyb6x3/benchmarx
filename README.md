@@ -1,5 +1,5 @@
 # benchmarx
-an llm open-weight model benchmarking script written in python
+an open-weight llm benchmarking script written in python for use with llama.cpp
 
 
 
@@ -13,7 +13,8 @@ an llm open-weight model benchmarking script written in python
 python 3.14 or newer
     - see requirements.txt for further python requirements
 llama.cpp
-    - this is not compatible with other openai apis as it uses the "completion" api. this is because I had trouble getting llama.cpp to work with more recent openai standards and the /completions endpoint is known and working with all the flags I needed. If you understand the api better than I do please submit a pr.
+    - this is not compatible with other openai apis as it uses the "completion" api. this is because I had trouble getting llama.cpp to work with more recent openai standards and the /completions endpoint is known and working with all the flags I needed. If you understand the api better than I do please submit a PR or hit my inbox
+
 
 
 ## use
