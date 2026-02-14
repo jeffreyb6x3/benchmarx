@@ -14,8 +14,8 @@
 import pandas as pd
 import requests
 import os
-from pathlib import Path
 import argparse
+import datetime
 
 
 # prompt request function
@@ -23,41 +23,58 @@ class Request:
     def __init__(
         self,
         models,
-        n_ctx,
         prompt,
         base_url,
-        n_predict,
-        commands,
+        auth,
+        parameters,
     ):
         self.models = models
-        self.n_ctx = int(n_ctx)
         self.prompt = prompt
         self.url = base_url
-        self.n_predict = n_predict
-        self.commands = commands
-        self.headers = {"Content-Type": "application/json"}
+        self.auth = auth
+        self.parameters = {}
+        self.headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth}",
+        }
+
+        if parameters:
+            try:
+                for parameter in parameters:
+                    key, value = parameter.split("=", 1)
+                    try:
+                        corrected_value = int(value)
+                    except ValueError:
+                        try:
+                            corrected_value = float(value)
+                        except ValueError:
+                            corrected_value = value
+                    self.parameters[key] = corrected_value
+            except ValueError:
+                raise ValueError("Parameters must be in key=value format")
 
     def send_request(self, model):
         self.model = model
         self.payload = {
             "model": self.model,
             "prompt": self.prompt,
-            "n_ctx": self.n_ctx,
-            "n_predict": self.n_predict,
         }
 
+        if self.parameters:
+            self.payload.update(self.parameters)
         self.response = requests.post(self.url, headers=self.headers, json=self.payload)
+
         return self.response.json()
 
 
-# cleab the output into a dictt and append it to a list of dicts
+# clean the output into a dict and append it to a list of dicts
 def parse_output(model_output, count, model):
     output = model_output
     run_output = {
         "model": model,
+        "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "run": count,
         "prompt": output["prompt"],
-        "content": output["content"],
         "tokens_predicted": output["tokens_predicted"],
         "tokens_evaluated": output["tokens_evaluated"],
         "temperature": output["generation_settings"]["temperature"],
@@ -70,10 +87,26 @@ def parse_output(model_output, count, model):
         "predicted_ms": output["timings"]["predicted_ms"],
         "predicted_per_second": output["timings"]["predicted_per_second"],
     }
-    return run_output
+
+    model_response = {
+        "model": model,
+        "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "content": output["content"],
+    }
+
+    data = [run_output, model_response]
+    return data
 
 
-def save_csv(record):
+def dir_maker():
+    if not os.path.exists("output"):
+        os.mkdir("output")
+
+    if not os.path.exists("output/responses"):
+        os.mkdir("output/responses")
+
+
+def save_csv(benchmark):
     file_number = 1
     file_saved = False
     while file_saved == False:
@@ -82,46 +115,51 @@ def save_csv(record):
         else:
             file_saved = True
 
-    record.to_csv(os.path.abspath(f"output/benchmarx_{file_number}.csv"))
+    benchmark.to_csv(os.path.abspath(f"output/benchmarx_{file_number}.csv"))
 
 
-# arg_parse function to pass args to the send_request function
+def save_json(content, model):
+    content.to_json(
+        os.path.abspath(
+            f"output/responses/{model}_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.json"
+        )
+    )
+
+
 def arg_parser():
-    parser = (
-        argparse.ArgumentParser()
-    )  # calls an instance of the argparse.ArgumentParser
+    parser = argparse.ArgumentParser()
     parser.add_argument("models", nargs="+")
-    parser.add_argument("--n_ctx", default=8000, nargs="?")
     parser.add_argument(
         "--prompt",
-        default="Define the events of the clone wars from a marxist dialectical materialist perspective.",
+        default="Describe the events of the clone wars from a marxist dialectical materialist perspective.",
         nargs="?",
     )
     parser.add_argument(
         "--base_url", default="http://localhost:2026/completion", nargs="?"
     )
-    parser.add_argument("--n_predict", default=-1, nargs="?")
-    parser.add_argument("--commands", default="", nargs="*")
+    parser.add_argument("--auth", default="password123", nargs="?")
+    parser.add_argument("--parameters", nargs="*")
 
     return parser.parse_args()
 
 
-# sends a request for each model arg passed in args 3 times, appends its parsed output as a dict to a list, and returns that list of dicts as a dataframe.
 def main():
-    record = []
+    benchmark = []
     args = vars(arg_parser())
     model_request = Request(**args)
     for model in model_request.models:
         count = 1
         while count < 4:
             model_output = model_request.send_request(model)
-            # print(arg_parser())
-            record.append(parse_output(model_output, count, model))
+            run_output, model_response = parse_output(model_output, count, model)
+            benchmark.append(run_output)
+            content = model_response
+            content = pd.DataFrame([content])
+            save_json(content, model)
             count += 1
-    record = pd.DataFrame(record)
-    save_csv(record)
+    benchmark = pd.DataFrame(benchmark)
+    save_csv(benchmark)
 
 
-# main
 if __name__ == "__main__":
     main()

@@ -1,0 +1,4 @@
+#requirements
+python >=3.14
+pandas
+requests
