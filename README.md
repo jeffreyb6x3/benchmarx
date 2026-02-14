@@ -6,16 +6,14 @@ an llm open-weight model benchmarking script written in python
 ## installation
 1) clone this repo
 2) install requirements.txt
-    recommended: use a venv with uv. conda, containers, or rawdogging it into your system interpreter will also work I guess
+    recommended: use a venv with uv. If that's unclear, research python virtual environments
 3) run main.py with appropriate arguments
 
 ### requirements
 python 3.14 or newer
     - see requirements.txt for further python requirements
-    - or just install it without reading it. Be honest, that's what you were going to do anyway
-llama.cpp openai compatible api
-    - note: this may or may not work for other-than-llama.cpp providers. this script relies on exactly the output json llama.cpp and hasn't been tested with other providers including cloud providers as it is intended for benchmarking local models
-
+llama.cpp
+    - this is not compatible with other openai apis as it uses the "completion" api. this is because I had trouble getting llama.cpp to work with more recent openai standards and the /completions endpoint is known and working with all the flags I needed. If you understand the api better than I do please submit a pr.
 
 
 ## use
