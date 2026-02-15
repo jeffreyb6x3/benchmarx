@@ -144,6 +144,7 @@ def arg_parser():
 
 
 def main():
+    dir_maker()
     benchmark = []
     args = vars(arg_parser())
     model_request = Request(**args)
